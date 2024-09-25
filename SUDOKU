@@ -1,1 +1,219 @@
+import java.io.*;
+import java.util.*;
 
+public class Sudoku {
+
+    private int[][] board;
+    private List<String> history;
+
+    public Sudoku() {
+        this.board = new int[9][9];
+        this.history = new ArrayList<>();
+    }
+
+    public void printBoard() {
+        for (int[] row : board) {
+            for (int num : row) {
+                System.out.print(num == 0 ? "." : num);
+                System.out.print(" ");
+            }
+            System.out.println();
+        }
+        System.out.println();
+    }
+
+    public boolean isValid(int row, int col, int num) {
+        // Check row
+        for (int i = 0; i < 9; i++) {
+            if (board[row][i] == num) return false;
+        }
+
+        // Check column
+        for (int i = 0; i < 9; i++) {
+            if (board[i][col] == num) return false;
+        }
+
+        // Check 3x3 box
+        int boxRowStart = (row / 3) * 3;
+        int boxColStart = (col / 3) * 3;
+        for (int i = boxRowStart; i < boxRowStart + 3; i++) {
+            for (int j = boxColStart; j < boxColStart + 3; j++) {
+                if (board[i][j] == num) return false;
+            }
+        }
+
+        return true;
+    }
+
+    public boolean setValue(int row, int col, int num) {
+        if (isValid(row, col, num)) {
+            board[row][col] = num;
+            history.add(String.format("%d %d %d", row, col, num));
+            return true;
+        }
+        return false;
+    }
+
+    public void checkCompletion() {
+        // Check rows
+        for (int i = 0; i < 9; i++) {
+            boolean rowComplete = true;
+            for (int j = 0; j < 9; j++) {
+                if (board[i][j] == 0) {
+                    rowComplete = false;
+                    break;
+                }
+            }
+            if (rowComplete) {
+                System.out.println("Complete row detected: " + i);
+                return;
+            }
+        }
+
+        // Check columns
+        for (int i = 0; i < 9; i++) {
+            boolean colComplete = true;
+            for (int j = 0; j < 9; j++) {
+                if (board[j][i] == 0) {
+                    colComplete = false;
+                    break;
+                }
+            }
+            if (colComplete) {
+                System.out.println("Complete column detected: " + i);
+                return;
+            }
+        }
+
+        // Check 3x3 boxes
+        for (int boxRow = 0; boxRow < 9; boxRow += 3) {
+            for (int boxCol = 0; boxCol < 9; boxCol += 3) {
+                boolean boxComplete = true;
+                for (int i = boxRow; i < boxRow + 3; i++) {
+                    for (int j = boxCol; j < boxCol + 3; j++) {
+                        if (board[i][j] == 0) {
+                            boxComplete = false;
+                            break;
+                        }
+                    }
+                }
+                if (boxComplete) {
+                    System.out.println("Complete 3x3 box detected: " + boxRow / 3 + "," + boxCol / 3);
+                    return;
+                }
+            }
+        }
+    }
+
+    public void saveGame(String filename) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename))) {
+            for (int[] row : board) {
+                for (int num : row) {
+                    writer.write(num + " ");
+                }
+                writer.write("\n");
+            }
+            writer.write("History:\n");
+            for (String move : history) {
+                writer.write(move + "\n");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void loadGame(String filename) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
+            for (int i = 0; i < 9; i++) {
+                String[] line = reader.readLine().split(" ");
+                for (int j = 0; j < 9; j++) {
+                    board[i][j] = Integer.parseInt(line[j]);
+                }
+            }
+            reader.readLine(); // Skip "History:"
+            String line;
+            while ((line = reader.readLine()) != null) {
+                history.add(line);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void startEmptyBoard() {
+        board = new int[9][9];
+        history.clear();
+        System.out.println("Started with an empty board.");
+        printBoard();
+    }
+
+    public void startWithFilledCells(int numCells) {
+        if (numCells < 9 || numCells > 21) {
+            System.out.println("Number of cells must be between 9 and 21.");
+            return;
+        }
+        startEmptyBoard();
+        Random rand = new Random();
+        int count = 0;
+        while (count < numCells) {
+            int row = rand.nextInt(9);
+            int col = rand.nextInt(9);
+            int num = rand.nextInt(9) + 1;
+            if (setValue(row, col, num)) {
+                count++;
+            }
+        }
+        System.out.println("Started with " + numCells + " filled cells.");
+        printBoard();
+    }
+
+    public static void main(String[] args) {
+        Sudoku sudoku = new Sudoku();
+        Scanner scanner = new Scanner(System.in);
+
+        while (true) {
+            System.out.println("Sudoku Game Menu:");
+            System.out.println("1. Start Empty Board");
+            System.out.println("2. Start with Randomly Filled Cells");
+            System.out.println("3. Save Game");
+            System.out.println("4. Load Game");
+            System.out.println("5. Print Board");
+            System.out.println("6. Check Completion");
+            System.out.println("7. Exit");
+
+            int choice = scanner.nextInt();
+            switch (choice) {
+                case 1:
+                    sudoku.startEmptyBoard();
+                    break;
+                case 2:
+                    System.out.print("Enter number of cells to fill (between 9 and 21): ");
+                    int numCells = scanner.nextInt();
+                    sudoku.startWithFilledCells(numCells);
+                    break;
+                case 3:
+                    System.out.print("Enter filename to save the game: ");
+                    String saveFilename = scanner.next();
+                    sudoku.saveGame(saveFilename);
+                    break;
+                case 4:
+                    System.out.print("Enter filename to load the game: ");
+                    String loadFilename = scanner.next();
+                    sudoku.loadGame(loadFilename);
+                    break;
+                case 5:
+                    sudoku.printBoard();
+                    break;
+                case 6:
+                    sudoku.checkCompletion();
+                    break;
+                case 7:
+                    System.out.println("Exiting...");
+                    scanner.close();
+                    return;
+                default:
+                    System.out.println("Invalid choice. Please try again.");
+            }
+        }
+    }
+}
